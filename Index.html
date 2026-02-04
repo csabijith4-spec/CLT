@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLT Interactive Lab</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; }
+        .container { width: 95%; max-width: 1000px; background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); margin-top: 20px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; background: #f1f5f9; padding: 20px; border-radius: 15px; }
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+        button { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: transform 0.1s; }
+        button:hover { background: #1d4ed8; }
+        button:active { transform: scale(0.98); }
+        .chart-container { position: relative; height: 400px; margin-top: 20px; }
+        label { font-size: 0.9rem; font-weight: bold; color: #475569; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1> The CLT Lab</h1>
+        <p>Watch random samples evolve into a Normal Distribution as sample size becomes large</p>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>1. Pick Population Shape</label>
+            <select id="distType">
+                <option value="uniform">Uniform (Flat)</option>
+                <option value="skewed">Skewed (Extreme)</option>
+                <option value="bimodal">Bimodal (Two Peaks)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>2. Sample Size (n = <span id="n-display">1</span>)</label>
+            <input type="range" id="sampleSize" min="1" max="100" value="1">
+        </div>
+        <div class="control-group">
+            <label>3. Run Experiment</label>
+            <button onclick="runSimulation()">Generate 2,500 Averages</button>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="cltChart"></canvas>
+    </div>
+</div>
+
+<script>
+    let myChart;
+
+    function getRandom(type) {
+        if (type === 'uniform') return Math.random();
+        if (type === 'skewed') return Math.pow(Math.random(), 3); // Bunches at zero
+        if (type === 'bimodal') return Math.random() > 0.5 ? (Math.random() * 0.2) : (0.8 + Math.random() * 0.2);
+    }
+
+    function runSimulation() {
+        const n = parseInt(document.getElementById('sampleSize').value);
+        const type = document.getElementById('distType').value;
+        document.getElementById('n-display').innerText = n;
+        
+        const means = [];
+        for (let i = 0; i < 2500; i++) {
+            let sum = 0;
+            for (let j = 0; j < n; j++) {
+                sum += getRandom(type);
+            }
+            means.push(sum / n);
+        }
+
+        updateChart(means);
+    }
+
+    function updateChart(data) {
+        const binCount = 40;
+        const bins = new Array(binCount).fill(0);
+        
+        data.forEach(val => {
+            let index = Math.floor(val * binCount);
+            if (index >= binCount) index = binCount - 1;
+            bins[index]++;
+        });
+
+        const ctx = document.getElementById('cltChart').getContext('2d');
+        
+        if (myChart) {
+            myChart.data.datasets[0].data = bins;
+            myChart.update();
+        } else {
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: new Array(binCount).fill(''),
+                    datasets: [{
+                        label: 'Frequency',
+                        data: bins,
+                        backgroundColor: 'rgba(37, 99, 235, 0.7)',
+                        borderColor: '#2563eb',
+                        borderWidth: 1,
+                        barPercentage: 1,
+                        categoryPercentage: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 800, easing: 'easeOutQuart' },
+                    scales: {
+                        y: { beginAtZero: true, display: false },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+    }
+
+    // Initial run
+    document.getElementById('sampleSize').oninput = runSimulation;
+    runSimulation();
+</script>
+
+</body>
+</html>
+
